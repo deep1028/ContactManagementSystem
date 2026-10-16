@@ -16,6 +16,15 @@ struct Node{
     struct Node *next;
 };
 
+#define TABLE_SIZE 10
+
+struct HashNode{
+    struct Node *contact;
+    struct HashNode *next;
+};
+
+struct HashNode *hashTable[TABLE_SIZE] = {NULL};
+
 struct Node *start = NULL;
 
 int nextId = 1;
@@ -94,6 +103,8 @@ void addContact(){
         }
         temp -> next = newNode;
     }
+
+    insertHash(newNode);
     printf("Contact added successfully!\n");
 }
 
@@ -316,6 +327,59 @@ void updateContact(){
     scanf(" %[^\n]", temp -> contact.category);
 
     printf("\nContact updated successfully!\n");
+}
+
+int hashFunction(char phone[]){
+    int sum = 0;
+    for(int i = 0; phone[i] != '\0'; i++){
+        sum += phone[i];
+    }
+
+    return sum % TABLE_SIZE;
+}
+
+void insertHash(struct Node *contact){
+    int index = hashFunction(contact -> contact.phone);
+
+    struct HashNode *newNode;
+
+    newNode = (struct HashNode *)malloc(sizeof(struct HashNode));
+
+    if(newNode == NULL){
+        printf("Hash memory allocation failed!\n");
+        return;
+    }
+
+    newNode -> contact = contact;
+    newNode -> next = hashTable[index];
+    hashTable[index] = newNode;
+}
+
+void searchByPhone(){
+    char phone[20];
+
+    printf("Enter Phone Number to search: ");
+    scanf("%s", phone);
+
+    int index = hashFunction(phone);
+
+    struct HashNode *temp = hashTable[index];
+
+    while(temp != NULL){
+        if(strcmp(temp -> contact -> contact.phone, phone) == 0){
+            printf("\nContact Found!\n");
+            printf("ID       : %s\n", temp->contact->contact.id);
+            printf("Name     : %s\n", temp->contact->contact.name);
+            printf("Phone    : %s\n", temp->contact->contact.phone);
+            printf("Email    : %s\n", temp->contact->contact.email);
+            printf("Address  : %s\n", temp->contact->contact.address);
+            printf("Category : %s\n", temp->contact->contact.category);
+
+            return;
+        }
+        temp = temp -> next;
+    }
+    printf("Contact not found.\n");
 }
 
 int main(){
