@@ -18,6 +18,30 @@ struct Node{
 
 struct Node *start = NULL;
 
+int nextId = 1;
+
+int phoneExists(char phone[]){
+    struct Node *temp = start;
+    while(temp != NULL){
+        if(strcmp(temp -> contact.phone, phone) == 0){
+            return 1;
+        }
+        temp = temp -> next;
+    }
+    return 0;
+}
+
+int emailExists(char email[]){
+    struct Node *temp = start;
+    while(temp != NULL){
+        if(strcmp(temp -> contact.email, email) == 0){
+            return 1;
+        }
+        temp = temp -> next;
+    }
+    return 0;
+}
+
 void addContact(){
     struct Node *newNode;
 
@@ -28,17 +52,29 @@ void addContact(){
         return;
     }
 
-    printf("Enter Contact ID: ");
-    scanf("%s", newNode -> contact.id);
-
     printf("Enter Contact Name: ");
     scanf(" %[^\n]", newNode -> contact.name);
 
     printf("Enter Phone Number: ");
     scanf("%s", newNode -> contact.phone);
 
-    printf("Enter EMail ID: ");
+    if(phoneExists(newNode -> contact.phone)){
+        printf("Error: Phone number already exists!\n");
+        free(newNode);
+        return;
+    }
+
+    printf("Enter Mail ID: ");
     scanf("%s", newNode -> contact.email);
+
+    if(emailExists(newNode -> contact.email)){
+        printf("Error: Email already exists!\n");
+        free(newNode);
+        return;
+    }
+
+    sprintf(newNode -> contact.id, "C%03d", nextId++);
+    printf("Generated Contact ID: %s\n", newNode -> contact.id);
 
     printf("Enter Address: ");
     scanf(" %[^\n]", newNode -> contact.address);
@@ -58,8 +94,7 @@ void addContact(){
         }
         temp -> next = newNode;
     }
-
-    printf("Contact added Successfully!\n");
+    printf("Contact added successfully!\n");
 }
 
 void displayContacts(){
@@ -85,30 +120,202 @@ void displayContacts(){
 }
 
 void deleteContact(){
-    char id[20];
-    printf("Enter Contact ID to delete: ");
-    scanf("%s", id);
+    char name[50];
+
+    printf("Enter Contact Name to delete: ");
+    scanf(" %[^\n]", name);
 
     struct Node *temp = start;
+    struct Node *matches[100];
+
+    int count = 0;
+
+    while(temp != NULL){
+        if(strcmp(temp -> contact.name, name) == 0){
+            if(count < 100){
+                matches[count] = temp;
+                count++;
+            }
+        }
+        temp = temp -> next;
+    }
+    if(count == 0){
+        printf("Contact not found.\n");
+        return;
+    }
+    if(count == 1){
+        temp = matches[0];
+
+        printf("\nContact found:\n");
+        printf("ID     : %s\n", temp -> contact.id);
+        printf("Name   : %s\n", temp -> contact.name);
+        printf("Phone  : %s\n", temp -> contact.phone);
+        printf("Email  : %s\n", temp -> contact.email);
+
+        char choice;
+
+        printf("\nAre you sure you want to delete this contact? (Y/N): ");
+        scanf(" %c", &choice);
+
+        if(choice == 'Y' || choice == 'N'){
+            struct Node *curr = start;
+            struct Node *prev = NULL;
+
+            while(curr != NULL && curr != temp){
+                prev = curr;
+                curr = curr -> next;
+            }
+            if(prev == NULL){
+                start = curr -> next;
+            } else {
+                prev -> next = curr -> next;
+            }
+            free(curr);
+            printf("Contact deleted successfully!\n");
+        } else {
+            printf("Deletion cancelled.\n");
+        }
+        return;
+    }
+    printf("\nMultiple contacts found:\n");
+    
+    for(int i = 0; i < count; i++){
+        printf("\n%d. %s | %s | %s\n", 
+            i+1,
+            matches[i] -> contact.name,
+            matches[i] -> contact.phone,
+            matches[i] -> contact.email);
+    }
+
+    int choice;
+
+    printf("\nEnter contact number to delete: ");
+    scanf("%d", &choice);
+    if(choice < 1 || choice > count){
+        printf("Invalid choice.\n");
+        return;
+    }
+    temp = matches[choice - 1];
+
+    struct Node *curr = start;
     struct Node *prev = NULL;
 
-    while(temp != NULL && strcmp(temp -> contact.id, id) != 0){
-        prev = temp;
+    while(curr != NULL && curr != temp){
+        prev = curr;
+        curr = curr -> next;
+    }
+    if(prev == NULL){
+        start = curr -> next;
+    } else {
+        prev -> next = start -> next;
+    }
+    free(curr);
+    printf("Contact deleted successfully!\n");
+
+}
+
+void updateContact(){
+    char name[50];
+
+    printf("Enter Contact Name to update: ");
+    scanf(" %[^\n]", name);
+
+    struct Node *temp = start;
+    struct Node *matches[100];
+
+    int count = 0;
+
+    while(temp != NULL){
+        if(strcmp(temp -> contact.name, name) == 0){
+            if(count < 100){
+                matches[count] = temp;
+                count++;
+            }
+        }
         temp = temp -> next;
     }
 
-    if(temp == NULL){
+    if(count == 0){
         printf("Contact not found.\n");
         return;
     }
 
-    if(prev == NULL){
-        start = temp -> next;
+    if(count == 1){
+        temp = matches[0];
+
+        printf("\nContact found:\n");
+        printf("ID       : %s\n", temp->contact.id);
+        printf("Name     : %s\n", temp->contact.name);
+        printf("Phone    : %s\n", temp->contact.phone);
+        printf("Email    : %s\n", temp->contact.email);
+        printf("Address  : %s\n", temp->contact.address);
+        printf("Category : %s\n", temp->contact.category);
     } else {
-        prev -> next = temp -> next;
+        printf("\nMultiple contacts found:\n");
+
+        for(int i = 0; i < count; i++){
+            printf("\n%d. ID: %s | Name: %s | Phone: %s | Email: %s\n",
+                i + 1,
+                matches[i] -> contact.id,
+                matches[i] -> contact.name,
+                matches[i] -> contact.phone,
+                matches[i] -> contact.email);
+        }
+        int choice;
+
+        printf("\nEnter contact number to update: ");
+        scanf("%d", &choice);
+
+        if(choice < 1 || choice > count){
+            printf("Invalid choice\n");
+            return;
+        }
+        temp = matches[choice - 1];
     }
-    free(temp);
-    printf("Contact deleted Successfully!\n");
+    printf("\nEnter new details:\n");
+
+    char newPhone[20];
+    char newEmail[100];
+
+    printf("Enter new Phone Number: ");
+    scanf("%s", newPhone);
+
+    struct Node *check = start;
+
+    while(check != NULL){
+        if(check != temp && strcmp(check -> contact.phone, newPhone) == 0){
+            printf("Error: Phone number already exists!\n");
+            return;
+        }
+        check = check -> next;
+    }
+    printf("Enter new Email ID: ");
+    scanf("%s", newEmail);
+
+    check = start;
+
+    while(check != NULL){
+        if(check != temp && strcmp(check -> contact.email, newEmail) == 0){
+            printf("Error: Email already exists!\n");
+            return;
+        }
+        check = check -> next;
+
+    }
+
+    printf("Enter new Name: ");
+    scanf(" %[^\n]", temp -> contact.name);
+
+    strcpy(temp -> contact.phone, newPhone);
+    strcpy(temp -> contact.emailm, newEmail);
+
+    printf("Enter new Address: ");
+    scanf(" %[^\n]", temp -> contact.address);
+
+    printf("Enter new Category: ");
+    scanf(" %[^\n]", temp -> contact.category);
+
+    printf("\nContact updated successfully!\n");
 }
 
 int main(){
