@@ -23,6 +23,14 @@ struct HashNode{
     struct HashNode *next;
 };
 
+struct TreeNode{
+    struct Node *contact;
+    struct TreeNode *left;
+    struct TreeNode *right;
+};
+
+struct TreeNode *root = NULL;
+
 struct HashNode *hashTable[TABLE_SIZE] = {NULL};
 
 struct Node *start = NULL;
@@ -105,6 +113,8 @@ void addContact(){
     }
 
     insertHash(newNode);
+    root = insertBST(root, newNode);
+
     printf("Contact added successfully!\n");
 }
 
@@ -220,9 +230,12 @@ void deleteContact(){
     } else {
         prev -> next = start -> next;
     }
+    deleteFromHash(curr);
     free(curr);
-    printf("Contact deleted successfully!\n");
 
+    rebuildBST();
+
+    printf("Contact deleted successfully!\n");
 }
 
 void updateContact(){
@@ -311,20 +324,24 @@ void updateContact(){
             return;
         }
         check = check -> next;
-
     }
+
+    deleteFromHash(temp);
 
     printf("Enter new Name: ");
     scanf(" %[^\n]", temp -> contact.name);
 
     strcpy(temp -> contact.phone, newPhone);
-    strcpy(temp -> contact.emailm, newEmail);
+    strcpy(temp -> contact.email, newEmail);
 
     printf("Enter new Address: ");
     scanf(" %[^\n]", temp -> contact.address);
 
     printf("Enter new Category: ");
     scanf(" %[^\n]", temp -> contact.category);
+
+    insertHash(temp);
+    rebuildBST();
 
     printf("\nContact updated successfully!\n");
 }
@@ -355,6 +372,27 @@ void insertHash(struct Node *contact){
     hashTable[index] = newNode;
 }
 
+void deleteFromHash(struct Node *contact){
+    int index = hashFunction(contact -> contact.phone);
+
+    struct HashNode *temp = hashTable[index];
+    struct HashNode *prev = NULL;
+
+    while(temp != NULL){
+        if(temp -> contact == contact){
+            if(prev == NULL){
+                hashTable[index] = temp -> next;
+            } else {
+                prev -> next = temp -> next;
+            }
+            free(temp);
+            return;
+        }
+        prev = temp;
+        temp = temp -> next;
+    }
+}
+
 void searchByPhone(){
     char phone[20];
 
@@ -380,6 +418,204 @@ void searchByPhone(){
         temp = temp -> next;
     }
     printf("Contact not found.\n");
+}
+
+void rebuildHashTable(){
+    for(int i = 0; i < TABLE_SIZE; i++){
+        struct HashNode *temp = hashTable[i];
+
+        while(temp != NULL){
+            struct HashNode *next = temp -> next;
+            free(temp);
+            temp = next;
+        }
+        hashTable[i] = NULL;
+    }
+    struct Node *temp = start;
+    while(temp != NULL){
+        insertHash(temp);
+        temp = temp -> next;
+    }
+}
+
+struct TreeNode* insertBST(struct TreeNode *root, struct Node *contact){
+    if(root == NULL){
+        struct TreeNode *newNode;
+
+        newNode = (struct TreeNode *)malloc(sizeof(struct TreeNode));
+
+        if(newNode == NULL){
+            printf("BST memory allocation failed!\n");
+            return root;
+        }
+
+        newNode -> contact = contact;
+        newNode -> left = NULL;
+        newNode -> right = NULL;
+
+        return newNode;
+    }
+    if(strcmp(contact -> contact.name, root -> contact -> contact.name) < 0){
+        root -> left = insertBST(root -> left, contact);
+    } else {
+        root -> right = insertBST(root -> right, contact);
+    }
+
+    return root;
+}
+
+void searchByName(){
+    char name[50];
+
+    printf("Enter Contact Name to search: ");
+    scanf(" %[^\n]", name);
+
+    struct TreeNode *temp = root;
+
+    while(temp != NULL){
+        int result = strcmp(name, temp -> contact -> contact.name);
+
+        if(result == 0){
+            printf("\nContact Found!\n");
+            printf("ID       : %s\n", temp->contact->contact.id);
+            printf("Name     : %s\n", temp->contact->contact.name);
+            printf("Phone    : %s\n", temp->contact->contact.phone);
+            printf("Email    : %s\n", temp->contact->contact.email);
+            printf("Address  : %s\n", temp->contact->contact.address);
+            printf("Category : %s\n", temp->contact->contact.category);
+
+            return;
+        }
+        if(result < 0){
+            temp = temp -> left;
+        } else {
+            temp = temp -> right;
+        }
+    }
+
+    printf("Contact not found.\n");
+}
+
+void displayBST(struct TreeNode *root){
+    if(root == NULL){
+        return;
+    }
+
+    displayBST(root -> left);
+
+    printf("%s | %s | %s\n",
+            root -> contact -> contact.name,
+            root -> contact -> contact.phone,
+            root -> contact -> contact.email);
+
+    displayBST(root -> right);
+}
+
+void freeBST(struct TreeNode *root){
+    if(root == NULL){
+        return;
+    }
+
+    freeBST(root -> left);
+    freeBST(root -> right);
+
+    free(root);
+}
+
+void rebuildBST(){
+    freeBST(root);
+
+    root = NULL;
+
+    struct Node *temp = start;
+
+    while(temp != NULL){
+        root = insertBST(root, temp);
+        temp = temp -> next;
+    }
+}
+
+void sortContacts(){
+    if(start == NULL || start -> next == NULL){
+        printf("Not enough contacts to sort.\n");
+        return;
+    }
+
+    struct Node *i;
+    struct Node *j;
+
+    struct Contact temp;
+
+    for(i = start; i -> next != NULL; i = i -> next){
+        for(j = i -> next; j != NULL; j = j -> next){
+            if(strcmp(i -> contact.name, j -> contact.name) > 0){
+                temp = i -> contact;
+                i -> contact = j -> contact;
+                j -> contact = temp;
+            }
+        }
+    }
+    rebuildHashTable();
+    rebuildBST();
+    printf("Contacts sorted alphabetically successfully!\n");
+}
+
+void groupByCategory(){
+    if(start == NULL){
+        printf("No contacts available.\n");
+        return;
+    }
+
+    char categories[100][30];
+    int categoryCount = 0;
+
+    struct Node *temp = start;
+
+    while(temp != NULL){
+        int found = 0;
+        for(int i = 0; i < categoryCount; i++){
+            if(strcmp(categories[i], temp -> contact.category) == 0){
+                found = 1;
+                break;
+            }
+        }
+        if(!found && categoryCount < 100){
+            strcpy(categories[categoryCount], temp -> contact.category);
+            categoryCount++;
+        }
+        temp = temp -> next;
+    }
+
+    printf("\n========== CONTACTS BY CATEGORY ==========\n");
+
+    for(int i = 0; i < categoryCount; i++){
+        printf("\n--- %s ---\n", categories[i]);
+        temp = start;
+
+        while(temp != NULL){
+            if (strcmp(temp->contact.category,
+                       categories[i]) == 0) {
+
+                printf("ID       : %s\n",
+                       temp->contact.id);
+
+                printf("Name     : %s\n",
+                       temp->contact.name);
+
+                printf("Phone    : %s\n",
+                       temp->contact.phone);
+
+                printf("Email    : %s\n",
+                       temp->contact.email);
+
+                printf("Address  : %s\n",
+                       temp->contact.address);
+
+                printf("\n");
+            }
+            temp = temp -> next;
+        }
+    }
 }
 
 int main(){
